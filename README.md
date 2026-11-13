@@ -1,4 +1,4 @@
-# commonfabric.social
+# fbrc.social
 
 The link domain for Common Fabric share links.
 
@@ -32,6 +32,21 @@ server, so this site never sees it. Every page is the same file, run by
 `src/route.js`. Its Content-Security-Policy allows only that one inline script
 and style, by hash, and no network connections. Web Weaver's address is fixed
 in the script and never taken from the link.
+
+## Weavers
+
+Every Weaver, from any maker, answers the `fbrc:` scheme for
+invitations, so nothing here lists Weavers for the landing page; on a Mac the
+default Weaver opens. The association files do list Weaver apps, because
+that list is what lets iPhone, iPad, Mac and Android open a Weaver straight
+from Messages, Mail or a chat app. Being on it is a speed-up, not a
+requirement: a Weaver that isn't listed still works through the landing page.
+
+To add a Weaver, open a pull request adding its Apple app ID (team ID and
+bundle ID) to `APPLE_APP_IDS` in `build.py`, and, once Android is served, its
+package name and signing certificate's SHA-256 fingerprint. Apple and Android
+pick among several listed apps themselves, so the order of the list matters to
+anyone with more than one Weaver installed.
 
 ## Working on it
 

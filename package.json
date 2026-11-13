@@ -1,5 +1,5 @@
 {
-  "name": "commonfabric-social",
+  "name": "fbrc-social",
   "private": true,
   "scripts": {
     "build": "python3 build.py",

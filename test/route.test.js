@@ -20,7 +20,7 @@ function visit(over) {
     pathname: "/join",
     search: SEARCH,
     hash: HASH,
-    host: "commonfabric.social",
+    host: "fbrc.social",
     fresh: true,
     ua: UA.mac,
     platform: "MacIntel",
@@ -30,7 +30,7 @@ function visit(over) {
 }
 
 const WEB = CONFIG.webWeaver + "/join" + SEARCH + HASH;
-const WEAVER = "cfweaver://join" + SEARCH + HASH;
+const WEAVER = "fbrc://join" + SEARCH + HASH;
 
 test("someone without Weaver goes straight to Web Weaver, on every device", () => {
   for (const ua of [UA.mac, UA.iphone, UA.android, UA.windows]) {
@@ -90,7 +90,7 @@ test("/open on Android hands the code over as an intent extra, with a fixed fall
   assert.equal(d.view, "not-opened");
   assert.equal(
     d.launch,
-    "intent://commonfabric.social/join" + SEARCH + "#Intent;scheme=https;package=" +
+    "intent://fbrc.social/join" + SEARCH + "#Intent;scheme=https;package=" +
       CONFIG.androidPackage + ";S.code=s3cret;S.browser_fallback_url=" +
       encodeURIComponent(WEB) + ";end",
   );
@@ -104,7 +104,7 @@ test("/open off Apple and Android goes to Web Weaver", () => {
 test("an in-app browser is asked to open the link elsewhere, before anything else", () => {
   const d = visit({ ua: UA.instagram, known: true });
   assert.equal(d.view, "in-app");
-  assert.equal(d.link, "https://commonfabric.social/join" + SEARCH + HASH);
+  assert.equal(d.link, "https://fbrc.social/join" + SEARCH + HASH);
   // The app's "Open in Safari" takes the current address, code included.
   assert.equal(d.keepHash, true);
   assert.equal(d.redirect, undefined);
@@ -124,7 +124,7 @@ test("/setup on a Mac remembers Weaver and replies with the nonce and browser", 
   const d = visit({ pathname: "/setup", search: "", hash: "#n=N1&b=chrome" });
   assert.equal(d.view, "setup");
   assert.equal(d.remember, true);
-  assert.equal(d.launch, "cfweaver://setup?n=N1&b=chrome");
+  assert.equal(d.launch, "fbrc://setup?n=N1&b=chrome");
 });
 
 test("/setup without a nonce, or off a Mac, changes nothing", () => {

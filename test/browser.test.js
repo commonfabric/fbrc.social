@@ -75,7 +75,7 @@ test("without Weaver, /join lands on Web Weaver with the code intact", async (t)
 
 test("a known Mac browser shows Opened in Weaver, and the code leaves the address", async (t) => {
   const { page, violations } = await open(t, { known: true });
-  // The launch of cfweaver:// keeps the page from ever reporting "load".
+  // The launch of fbrc:// keeps the page from ever reporting "load".
   await page.goto(origin + "/join" + QUERY + "#code=s3cret", { waitUntil: "commit" });
   await page.locator('[data-view="opened"]').waitFor({ state: "visible" });
   assert.equal(await page.evaluate(() => location.hash), "");

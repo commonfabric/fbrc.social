@@ -10,7 +10,9 @@
 // the invitation's code anywhere else.
 var CONFIG = {
   webWeaver: "https://web-weaver.saga-castor.ts.net",
-  scheme: "cfweaver",
+  // The invitation scheme every Weaver answers, from any maker; the Mac's
+  // default Weaver gets it.
+  scheme: "fbrc",
   androidPackage: "com.commontools.CommonFabricWeaver",
   getWeaver: "https://commonfabric.com/",
   storageKey: "has-weaver",
