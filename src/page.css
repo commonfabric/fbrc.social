@@ -37,3 +37,5 @@ a { color: var(--accent); }
   text-decoration: none;
   cursor: pointer;
 }
+.link { word-break: break-all; font-size: 0.85rem; user-select: all; -webkit-user-select: all; }
+.js [data-view="fallback"] { display: none; }

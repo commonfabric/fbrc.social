@@ -20,6 +20,13 @@ let server, origin, browser;
 test.before(async () => {
   server = http.createServer((req, res) => {
     const p = new URL(req.url, "http://x").pathname;
+    if (p === "/tampered") {
+      // An edge feature rewriting the inline script breaks its CSP hash.
+      const page = fs.readFileSync(path.join(SITE, "join.html"), "utf8");
+      res.writeHead(200, { "content-type": "text/html" });
+      res.end(page.replace("<script>", "<script> "));
+      return;
+    }
     const file = path.join(SITE, p === "/" ? "index.html" : p.slice(1) + (path.extname(p) ? "" : ".html"));
     fs.readFile(file, (err, body) => {
       res.writeHead(err ? 404 : 200, { "content-type": "text/html" });
@@ -88,4 +95,34 @@ test("an unknown path shows the home view and runs under the CSP", async (t) => 
   await page.goto(origin + "/nothing-here");
   await page.locator('[data-view="home"]').waitFor({ state: "visible" });
   assert.deepEqual(violations, []);
+});
+
+test("a reload after Weaver opened has no code left and opens nothing", async (t) => {
+  const { page } = await open(t, { known: true });
+  await page.goto(origin + "/join" + QUERY + "#code=s3cret", { waitUntil: "commit" });
+  await page.locator('[data-view="opened"]').waitFor({ state: "visible" });
+  await page.reload();
+  await page.locator('[data-view="stale"]').waitFor({ state: "visible" });
+  assert.equal(await page.locator('[data-view="opened"]').isVisible(), false);
+});
+
+test("/open on a Mac teaches the browser that its owner has Weaver", async (t) => {
+  const { page } = await open(t, { known: false });
+  await page.goto(origin + "/open" + QUERY + "#code=s3cret", { waitUntil: "commit" });
+  await page.locator('[data-view="opened"]').waitFor({ state: "visible" });
+  assert.equal(await page.evaluate((k) => localStorage.getItem(k), CONFIG.storageKey), "1");
+});
+
+test("if the script is blocked, the page says so instead of going blank", async (t) => {
+  const { page, violations } = await open(t, { known: false });
+  await page.goto(origin + "/tampered" + QUERY + "#code=s3cret");
+  assert.equal(await page.locator('[data-view="fallback"]').isVisible(), true);
+  assert.ok(violations.length > 0, "expected the CSP to block the altered script");
+});
+
+test("the fallback never shows when the script runs", async (t) => {
+  const { page } = await open(t, { known: true });
+  await page.goto(origin + "/join" + QUERY + "#code=s3cret", { waitUntil: "commit" });
+  await page.locator('[data-view="opened"]').waitFor({ state: "visible" });
+  assert.equal(await page.locator('[data-view="fallback"]').isVisible(), false);
 });

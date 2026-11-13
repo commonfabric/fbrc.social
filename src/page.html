@@ -15,14 +15,14 @@
 </head>
 <body>
 <main>
+  <section data-view="fallback">
+    <h1>An invitation to a loom</h1>
+    <p>This page couldn't open it. Open the link again from the message it
+      came in, or ask for a new one.</p>
+  </section>
   <section data-view="opened" hidden>
     <h1>Opened in Weaver</h1>
     <p><a data-web>Didn't open? Continue in browser</a></p>
-  </section>
-  <section data-view="choose" hidden>
-    <h1>An invitation to a loom</h1>
-    <p><a class="primary" data-weaver>Open in Weaver</a></p>
-    <p><a data-web>Continue in browser</a></p>
   </section>
   <section data-view="not-opened" hidden>
     <h1>Weaver didn't open</h1>
@@ -33,6 +33,7 @@
     <h1>Open this in your browser</h1>
     <p>This app's built-in browser forgets you when it closes. Copy the link
       and open it in Safari or Chrome.</p>
+    <p class="link" data-link></p>
     <p><button class="primary" data-copy>Copy link</button></p>
   </section>
   <section data-view="setup" hidden>

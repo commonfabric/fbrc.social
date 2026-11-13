@@ -36,8 +36,7 @@ function routeOf(pathname) {
 
 // in: { pathname, search, hash, host, fresh, ua, platform, maxTouchPoints,
 //       known }
-// out: { view, redirect?, launch?, remember?, forget?, web?, weaver?,
-//        link? }
+// out: { view, redirect?, launch?, remember?, keepHash?, web?, link? }
 function decide(i) {
   var route = routeOf(i.pathname);
   var device = deviceOf(i.ua, i.platform, i.maxTouchPoints);
@@ -63,13 +62,13 @@ function decide(i) {
   // The code is removed from the address after the first visit, so a reload,
   // a back button or a restored tab has nothing left to open.
   if (!code) return { view: "stale" };
-  if (IN_APP.test(i.ua)) return { view: "in-app", link: link };
+  // Nothing is launched here, and the app's own "Open in Safari/Chrome" menu
+  // item takes the current address, so the code stays in it.
+  if (IN_APP.test(i.ua)) return { view: "in-app", link: link, keepHash: true };
 
   if (route === "join") {
     if (device === "mac" && i.known) {
-      return i.fresh
-        ? { view: "opened", launch: weaver, web: web, weaver: weaver }
-        : { view: "choose", web: web, weaver: weaver };
+      return { view: "opened", launch: i.fresh ? weaver : null, web: web };
     }
     return { view: "redirect", redirect: web };
   }
@@ -81,7 +80,6 @@ function decide(i) {
       remember: true,
       launch: i.fresh ? weaver : null,
       web: web,
-      weaver: weaver,
     };
   }
   if (device === "android") {
@@ -131,13 +129,19 @@ function run(w) {
     known: read(),
   });
 
+  // Set before the body draws: hides the fallback that shows only if this
+  // script never runs.
+  w.document.documentElement.className = "js";
   if (d.redirect) {
     loc.replace(d.redirect);
     return;
   }
   if (d.remember) write(true);
-  // Keep the code only in memory from here on.
-  if (loc.hash) w.history.replaceState(null, "", loc.pathname + loc.search);
+  // Keep the code only in memory from here on, so a reload, the back button or
+  // a restored tab has nothing left to open.
+  if (loc.hash && !d.keepHash) {
+    w.history.replaceState(null, "", loc.pathname + loc.search);
+  }
 
   function show() {
     var doc = w.document;
@@ -150,16 +154,29 @@ function run(w) {
         write(false);
       });
     });
-    doc.querySelectorAll("[data-weaver]").forEach(function (a) {
-      if (d.weaver) a.href = d.weaver;
-    });
     doc.querySelectorAll("[data-get-weaver]").forEach(function (a) {
       a.href = CONFIG.getWeaver;
     });
+    doc.querySelectorAll("[data-link]").forEach(function (el) {
+      el.textContent = d.link || "";
+    });
     doc.querySelectorAll("[data-copy]").forEach(function (b) {
       b.addEventListener("click", function () {
-        w.navigator.clipboard.writeText(d.link).then(function () {
+        var copied = w.navigator.clipboard
+          ? w.navigator.clipboard.writeText(d.link)
+          : Promise.reject(new Error("no clipboard"));
+        copied.then(function () {
           b.textContent = "Copied";
+        }, function () {
+          // Many in-app browsers refuse the clipboard: select the link
+          // instead, so a long-press copies it.
+          var shown = doc.querySelector("[data-link]");
+          var range = doc.createRange();
+          range.selectNodeContents(shown);
+          var sel = w.getSelection();
+          sel.removeAllRanges();
+          sel.addRange(range);
+          b.textContent = "Press and hold the link to copy it";
         });
       });
     });

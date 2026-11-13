@@ -19,6 +19,8 @@ jobs:
       - run: npm install --no-audit --no-fund
       - run: npx playwright install --with-deps chromium-headless-shell
       - run: npm test
+      # v3 keeps dot-directories; v4 drops them unless include-hidden-files is
+      # set, which would silently drop .well-known/.
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site
@@ -36,3 +38,18 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
+
+  # Checks what Pages and Cloudflare actually serve: an edge feature that
+  # rewrites the page's inline script breaks its CSP hash and blanks it.
+  smoke:
+    if: github.event_name == 'push'
+    needs: deploy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 build.py
+      - run: |
+          set -e
+          curl -fsS https://commonfabric.social/.well-known/apple-app-site-association | python3 -m json.tool > /dev/null
+          curl -fsS https://commonfabric.social/join -o live.html
+          cmp live.html site/join.html

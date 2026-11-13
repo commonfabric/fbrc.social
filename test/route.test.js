@@ -42,8 +42,10 @@ test("someone without Weaver goes straight to Web Weaver, on every device", () =
 });
 
 test("the redirect target is fixed, whatever host the link names", () => {
-  const d = visit({ search: "?host=https%3A%2F%2Fevil.example&space=x&invite=y" });
-  assert.ok(d.redirect.startsWith(CONFIG.webWeaver + "/join?"));
+  const search = "?host=https%3A%2F%2Fevil.example&space=x&invite=y";
+  const d = visit({ search, host: "evil.example" });
+  assert.equal(d.redirect, CONFIG.webWeaver + "/join" + search + HASH);
+  assert.equal(new URL(d.redirect).origin, new URL(CONFIG.webWeaver).origin);
 });
 
 test("a Mac browser known to have Weaver opens it at once", () => {
@@ -51,12 +53,15 @@ test("a Mac browser known to have Weaver opens it at once", () => {
   assert.equal(d.view, "opened");
   assert.equal(d.launch, WEAVER);
   assert.equal(d.web, WEB);
+  assert.equal(d.keepHash, undefined);
 });
 
 test("a known Mac browser never relaunches on reload, back or restore", () => {
-  const d = visit({ known: true, fresh: false });
-  assert.equal(d.view, "choose");
-  assert.equal(d.launch, undefined);
+  for (const pathname of ["/join", "/open"]) {
+    const d = visit({ pathname, known: true, fresh: false });
+    assert.equal(d.view, "opened");
+    assert.equal(d.launch, null);
+  }
 });
 
 test("only a Mac is ever treated as having Weaver", () => {
@@ -100,6 +105,8 @@ test("an in-app browser is asked to open the link elsewhere, before anything els
   const d = visit({ ua: UA.instagram, known: true });
   assert.equal(d.view, "in-app");
   assert.equal(d.link, "https://commonfabric.social/join" + SEARCH + HASH);
+  // The app's "Open in Safari" takes the current address, code included.
+  assert.equal(d.keepHash, true);
   assert.equal(d.redirect, undefined);
   assert.equal(d.launch, undefined);
 });

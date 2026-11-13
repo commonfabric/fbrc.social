@@ -18,7 +18,6 @@ ROOT = pathlib.Path(__file__).resolve().parent
 SRC = ROOT / "src"
 OUT = ROOT / "site"
 
-DOMAIN = "commonfabric.social"
 APPLE_APP_IDS = ["Z2F9QWVXN2.com.commontools.CommonFabricWeaver"]
 PAGES = ["index", "join", "open", "setup", "404"]
 
@@ -76,9 +75,12 @@ def main() -> None:
     for name in PAGES:
         (OUT / (name + ".html")).write_text(html)
     (OUT / ".well-known" / "apple-app-site-association").write_text(apple_app_site_association())
-    (OUT / "CNAME").write_text(DOMAIN + "\n")
-    # GitHub Pages runs Jekyll otherwise, which drops dot-directories.
-    (OUT / ".nojekyll").write_text("")
+    # Apple's CDN fetches this file with no redirect and parses it as JSON;
+    # check the built file, which is what Pages serves.
+    built = json.loads((OUT / ".well-known" / "apple-app-site-association").read_text())
+    paths = [c["/"] for c in built["applinks"]["details"][0]["components"]]
+    if paths != ["/join", "/open"]:
+        raise SystemExit("apple-app-site-association: unexpected paths " + repr(paths))
     print("built", OUT)
 
 
