@@ -1,0 +1,11 @@
+{
+  "name": "commonfabric-social",
+  "private": true,
+  "scripts": {
+    "build": "python3 build.py",
+    "test": "python3 build.py && node --test"
+  },
+  "devDependencies": {
+    "playwright": "1.59.1"
+  }
+}

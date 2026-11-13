@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="{{CSP}}">
+<meta name="referrer" content="no-referrer">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>An invitation to a loom</title>
+<meta property="og:title" content="An invitation to a loom">
+<meta property="og:site_name" content="Common Fabric">
+<meta property="og:description" content="Open it to join.">
+<link rel="preconnect" href="{{WEB_WEAVER}}">
+<script>{{SCRIPT}}</script>
+<style>{{STYLE}}</style>
+</head>
+<body>
+<main>
+  <section data-view="opened" hidden>
+    <h1>Opened in Weaver</h1>
+    <p><a data-web>Didn't open? Continue in browser</a></p>
+  </section>
+  <section data-view="choose" hidden>
+    <h1>An invitation to a loom</h1>
+    <p><a class="primary" data-weaver>Open in Weaver</a></p>
+    <p><a data-web>Continue in browser</a></p>
+  </section>
+  <section data-view="not-opened" hidden>
+    <h1>Weaver didn't open</h1>
+    <p><a class="primary" data-get-weaver>Get Weaver</a></p>
+    <p><a data-web>Continue in browser</a></p>
+  </section>
+  <section data-view="in-app" hidden>
+    <h1>Open this in your browser</h1>
+    <p>This app's built-in browser forgets you when it closes. Copy the link
+      and open it in Safari or Chrome.</p>
+    <p><button class="primary" data-copy>Copy link</button></p>
+  </section>
+  <section data-view="setup" hidden>
+    <h1>Links will open in Weaver</h1>
+    <p>Links in this browser profile will now open Weaver. If the browser asks,
+      tick "Always allow" and choose Open.</p>
+  </section>
+  <section data-view="setup-failed" hidden>
+    <h1>Setup didn't start</h1>
+    <p>Start it again from Weaver.</p>
+  </section>
+  <section data-view="stale" hidden>
+    <h1>This link has been opened already</h1>
+    <p>Open it again from the message it came in.</p>
+  </section>
+  <section data-view="home" hidden>
+    <h1>Common Fabric</h1>
+    <p><a href="https://commonfabric.com/">commonfabric.com</a></p>
+  </section>
+</main>
+</body>
+</html>
