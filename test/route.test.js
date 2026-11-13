@@ -85,13 +85,12 @@ test("/open on an iPhone says Weaver didn't open, and never fires the scheme", (
   assert.equal(d.web, WEB);
 });
 
-test("/open on Android hands the code over as an intent extra, with a fixed fallback", () => {
+test("/open on Android names the scheme, not an app, and hands the code over as an extra", () => {
   const d = visit({ pathname: "/open", ua: UA.android, maxTouchPoints: 5 });
   assert.equal(d.view, "not-opened");
   assert.equal(
     d.launch,
-    "intent://fbrc.social/join" + SEARCH + "#Intent;scheme=https;package=" +
-      CONFIG.androidPackage + ";S.code=s3cret;S.browser_fallback_url=" +
+    "intent://join" + SEARCH + "#Intent;scheme=fbrc;S.code=s3cret;S.browser_fallback_url=" +
       encodeURIComponent(WEB) + ";end",
   );
   assert.equal(d.remember, undefined);
@@ -120,11 +119,11 @@ test("a link with no code left has nothing to open", () => {
   }
 });
 
-test("/setup on a Mac remembers Weaver and replies with the nonce and browser", () => {
+test("/setup on a Mac remembers Weaver and replies with only the nonce", () => {
   const d = visit({ pathname: "/setup", search: "", hash: "#n=N1&b=chrome" });
   assert.equal(d.view, "setup");
   assert.equal(d.remember, true);
-  assert.equal(d.launch, "fbrc://setup?n=N1&b=chrome");
+  assert.equal(d.launch, "fbrc://setup?n=N1");
 });
 
 test("/setup without a nonce, or off a Mac, changes nothing", () => {

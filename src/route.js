@@ -13,7 +13,6 @@ var CONFIG = {
   // The invitation scheme every Weaver answers, from any maker; the Mac's
   // default Weaver gets it.
   scheme: "fbrc",
-  androidPackage: "com.commontools.CommonFabricWeaver",
   getWeaver: "https://commonfabric.com/",
   storageKey: "has-weaver",
 };
@@ -47,7 +46,7 @@ function decide(i) {
   if (route === "setup") {
     var nonce = fragment.get("n");
     if (device !== "mac" || !nonce) return { view: "setup-failed" };
-    var reply = new URLSearchParams({ n: nonce, b: fragment.get("b") || "" });
+    var reply = new URLSearchParams({ n: nonce });
     return {
       view: "setup",
       remember: true,
@@ -85,8 +84,10 @@ function decide(i) {
     };
   }
   if (device === "android") {
-    var intent = "intent://" + i.host + "/join" + i.search + "#Intent;" +
-      "scheme=https;package=" + CONFIG.androidPackage + ";" +
+    // Names the scheme and no app, so Android hands it to whichever Weaver
+    // answers it, or to the fallback when none does.
+    var intent = "intent://join" + i.search + "#Intent;" +
+      "scheme=" + CONFIG.scheme + ";" +
       "S.code=" + encodeURIComponent(code) + ";" +
       "S.browser_fallback_url=" + encodeURIComponent(web) + ";end";
     return { view: "not-opened", launch: i.fresh ? intent : null, web: web };

@@ -22,7 +22,7 @@ repository at `docs/development/projects/share-links/design.md`.
 | `/.well-known/apple-app-site-association`  | Lets Weaver on iPhone, iPad and Mac claim `/join` and `/open`.                                 |
 | `/join?host&space&invite#code`             | A share link. Without Weaver, goes straight on to Web Weaver; on a Mac browser known to have Weaver, opens Weaver. |
 | `/open?…#code`                             | The same link, reached from Web Weaver's **Open in Weaver**: the person asked for Weaver.      |
-| `/setup#n&b`                               | Opened by Weaver's onboarding card, so this browser remembers its owner has Weaver.            |
+| `/setup#n`                                 | Opened by Weaver's onboarding card, so this browser remembers its owner has Weaver.            |
 
 Android's `assetlinks.json` is added once the signing key's fingerprint is
 known.
