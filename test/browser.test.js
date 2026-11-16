@@ -225,8 +225,8 @@ test("/space previews as a link to a loom, not an invitation", () => {
   assert.match(join, /<meta property="og:title" content="An invitation to a loom">/);
 });
 
-test("the association file claims /space beside the invitation paths", () => {
+test("the association file does not claim /space until a released Weaver reads it", () => {
   const aasa = JSON.parse(fs.readFileSync(path.join(SITE, ".well-known", "apple-app-site-association"), "utf8"));
   const paths = aasa.applinks.details[0].components.map((c) => c["/"]);
-  assert.deepEqual(paths, ["/join", "/open", "/space"]);
+  assert.deepEqual(paths, ["/join", "/open"]);
 });

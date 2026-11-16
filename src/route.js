@@ -76,18 +76,15 @@ function decide(i) {
     // invitation would; the client says whether this person has access.
     var query = new URLSearchParams(i.search);
     if (!query.has("host") && !query.has("space")) return { view: "home" };
-    var webSpace = CONFIG.webWeaver + "/space" + i.search;
     if (IN_APP.test(i.ua)) {
       return { view: "in-app", link: "https://" + i.host + "/space" + i.search };
     }
-    if (device === "mac" && i.known) {
-      return {
-        view: "opened",
-        launch: i.fresh ? CONFIG.scheme + "://space" + i.search : null,
-        web: webSpace,
-      };
-    }
-    return { view: "redirect", redirect: webSpace };
+    // Every Weaver released so far refuses an fbrc.social or fbrc: link it
+    // does not know, with no way on to the browser, so a known Mac would
+    // strand its owner there. Until a released Weaver reads `fbrc://space`,
+    // a space link goes to Web Weaver for everyone, and the association file
+    // does not claim it.
+    return { view: "redirect", redirect: CONFIG.webWeaver + "/space" + i.search };
   }
 
   var code = fragment.get("code");

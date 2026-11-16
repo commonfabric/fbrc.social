@@ -181,12 +181,13 @@ test("a space link without Weaver goes straight to Web Weaver's /space, on every
   }
 });
 
-test("a space link on a known Mac browser opens the loom in Weaver through fbrc://space", () => {
-  const d = visitSpace({ known: true });
-  assert.equal(d.view, "opened");
-  assert.equal(d.launch, "fbrc://space" + SPACE);
-  assert.equal(d.web, WEB_SPACE);
-  assert.equal(visitSpace({ known: true, fresh: false }).launch, null);
+test("a space link goes to Web Weaver even on a Mac known to have Weaver, until Weaver reads fbrc://space", () => {
+  for (const fresh of [true, false]) {
+    const d = visitSpace({ known: true, fresh });
+    assert.equal(d.view, "redirect");
+    assert.equal(d.redirect, WEB_SPACE);
+    assert.equal(d.launch, undefined);
+  }
 });
 
 test("a space link never needs a code, and drops any fragment it carries", () => {
@@ -194,10 +195,7 @@ test("a space link never needs a code, and drops any fragment it carries", () =>
     const d = visitSpace({ known, fresh: false });
     assert.notEqual(d.view, "stale");
   }
-  const d = visitSpace({ hash: "#code=s3cret", known: true });
-  assert.equal(d.launch, "fbrc://space" + SPACE);
-  assert.equal(d.web, WEB_SPACE);
-  assert.equal(visitSpace({ hash: "#code=s3cret" }).redirect, WEB_SPACE);
+  assert.equal(visitSpace({ hash: "#code=s3cret", known: true }).redirect, WEB_SPACE);
 });
 
 test("a space link's redirect target is fixed, whatever host the link names", () => {

@@ -51,6 +51,11 @@ jobs:
       - run: python3 build.py
       - run: |
           set -e
-          curl -fsS https://fbrc.social/.well-known/apple-app-site-association | python3 -m json.tool > /dev/null
-          curl -fsS https://fbrc.social/join -o live.html
-          cmp live.html site/join.html
+          curl -fsS https://fbrc.social/.well-known/apple-app-site-association -o live-aasa.json
+          python3 -m json.tool live-aasa.json > /dev/null
+          cmp live-aasa.json site/.well-known/apple-app-site-association
+          # Pages differ only in their previews, so each is checked.
+          for page in join space; do
+            curl -fsS https://fbrc.social/$page -o live.html
+            cmp live.html site/$page.html
+          done

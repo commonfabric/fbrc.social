@@ -1,7 +1,8 @@
 """Builds the static site into ./site.
 
-Every HTML page is the same file: the script reads its own path to decide what
-to do. The page's Content-Security-Policy allows only its one inline script and
+Every HTML page runs the same script, which reads its own path to decide what
+to do; only each page's preview (title, Open Graph tags, the heading shown
+without the script) differs. The page's Content-Security-Policy allows only its one inline script and
 one inline style, by hash, and no network connections, so nothing but this
 script ever runs while the invitation's code is in the address.
 """
@@ -71,7 +72,6 @@ def apple_app_site_association() -> str:
                 "components": [
                     {"/": "/join", "comment": "an invitation"},
                     {"/": "/open", "comment": "an invitation, opened from Web Weaver"},
-                    {"/": "/space", "comment": "a link to a loom, which grants nothing"},
                 ],
             }],
         },
@@ -89,7 +89,7 @@ def main() -> None:
     # check the built file, which is what Pages serves.
     built = json.loads((OUT / ".well-known" / "apple-app-site-association").read_text())
     paths = [c["/"] for c in built["applinks"]["details"][0]["components"]]
-    if paths != ["/join", "/open", "/space"]:
+    if paths != ["/join", "/open"]:
         raise SystemExit("apple-app-site-association: unexpected paths " + repr(paths))
     print("built", OUT)
 
