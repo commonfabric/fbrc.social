@@ -20,7 +20,7 @@ repository at `docs/development/projects/share-links/design.md`.
 | Path                                       | What it is                                                                                     |
 | ------------------------------------------ | ---------------------------------------------------------------------------------------------- |
 | `/.well-known/apple-app-site-association`  | Lets Weaver on iPhone, iPad and Mac claim `/join` and `/open`.                                 |
-| `/join?host&space&invite#code`             | A share link. Without Weaver, goes straight on to Web Weaver; on a Mac browser known to have Weaver, opens Weaver. |
+| `/join?host&space&invite#code`             | A share link. Without Weaver, goes straight on to Web Weaver; on a Mac browser known to have Weaver, tries Weaver and offers **Continue in browser**. |
 | `/open?…#code`                             | The same link, reached from Web Weaver's **Open in Weaver**: the person asked for Weaver.      |
 | `/setup#n`                                 | Opened by Weaver's onboarding card, so this browser remembers its owner has Weaver.            |
 
@@ -61,6 +61,25 @@ tests. With Chrome installed, `PW_CHANNEL=chrome npm test` uses it (still
 headless) instead of Playwright's download.
 
 Pushing to `main` publishes `site/` to GitHub Pages.
+
+## Knowing a browser has Weaver
+
+A browser can't tell whether an app took an `fbrc:` link: with no app to
+answer, most browsers fail silently. So the page never says Weaver opened. It
+says **Opening Weaver…**, always with **Continue in browser**, and a Mac
+browser learns its owner has Weaver only from:
+
+- `/setup`, which Weaver itself opens.
+- The window losing focus (`blur`) after the page fires the launch, which is
+  what happens when an app comes forward. Each launch forgets Weaver first and
+  must earn the remember again, so a wrong guess lasts one link at most.
+
+Focus is a heuristic, not proof: a browser's own "Open Weaver?" prompt or
+"can't open" alert takes focus too, as does switching tabs right after the
+launch. Being hidden is not counted, because closing the tab or going Back
+hides the page as well. **Continue in browser** forgets Weaver at once. Someone
+who has Weaver and continues in the browser is sent to Web Weaver until they
+next use **Open in Weaver**.
 
 ## Keep in mind
 

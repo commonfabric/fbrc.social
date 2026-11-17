@@ -37,7 +37,19 @@ function routeOf(pathname) {
 
 // in: { pathname, search, hash, host, fresh, ua, platform, maxTouchPoints,
 //       known }
-// out: { view, redirect?, launch?, remember?, keepHash?, web?, link? }
+// out: { view, redirect?, launch?, remember?, rememberOnLeave?, keepHash?,
+//        web?, link? }
+//
+// remember: Weaver itself sent the browser here, so it has Weaver.
+// rememberOnLeave: forget Weaver, fire the launch, and remember it again only
+// if the window then loses focus, the one sign a browser gives that an app
+// took the link. Opening "fbrc:" with no app to answer it fails silently in
+// most browsers, so the launch alone proves nothing, and each launch has to
+// earn the remember afresh: a browser wrongly known to have Weaver learns
+// otherwise on its next link. It is a heuristic: a browser's own "Open
+// Weaver?" prompt or "can't open" alert also takes focus, and so does
+// switching tabs by hand. Being hidden is not counted, since closing the tab
+// or going Back hides the page too.
 function decide(i) {
   var route = routeOf(i.pathname);
   var device = deviceOf(i.ua, i.platform, i.maxTouchPoints);
@@ -69,7 +81,12 @@ function decide(i) {
 
   if (route === "join") {
     if (device === "mac" && i.known) {
-      return { view: "opened", launch: i.fresh ? weaver : null, web: web };
+      return {
+        view: "opening",
+        rememberOnLeave: true,
+        launch: i.fresh ? weaver : null,
+        web: web,
+      };
     }
     return { view: "redirect", redirect: web };
   }
@@ -77,8 +94,8 @@ function decide(i) {
   // route === "open": the person asked for Weaver.
   if (device === "mac") {
     return {
-      view: "opened",
-      remember: true,
+      view: "opening",
+      rememberOnLeave: true,
       launch: i.fresh ? weaver : null,
       web: web,
     };
@@ -153,7 +170,10 @@ function run(w) {
     doc.querySelectorAll("[data-web]").forEach(function (a) {
       a.href = d.web || CONFIG.webWeaver;
       a.addEventListener("click", function () {
-        // A browser where Weaver didn't open has learned the wrong thing.
+        // Someone who continues in the browser didn't get Weaver this time,
+        // so stop sending their links to it; this also undoes a remember
+        // made on misleading evidence.
+        disarm();
         write(false);
       });
     });
@@ -183,7 +203,26 @@ function run(w) {
         });
       });
     });
-    if (d.launch) loc.href = d.launch;
+    if (d.launch) {
+      if (d.rememberOnLeave) {
+        write(false);
+        // Armed before the launch, so an app that comes forward at once is
+        // seen.
+        w.addEventListener("blur", left);
+        // Leaving the page is no evidence; nor is focus moving after it has
+        // gone or been put away in the back-forward cache.
+        w.addEventListener("pagehide", disarm);
+      }
+      loc.href = d.launch;
+    }
+  }
+  function left() {
+    disarm();
+    write(true);
+  }
+  function disarm() {
+    w.removeEventListener("blur", left);
+    w.removeEventListener("pagehide", disarm);
   }
   if (w.document.readyState === "loading") {
     w.document.addEventListener("DOMContentLoaded", show);

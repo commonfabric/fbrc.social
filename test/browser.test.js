@@ -56,7 +56,7 @@ async function open(t, { known }) {
   page.on("console", (m) => {
     if (/Content Security Policy/i.test(m.text())) violations.push(m.text());
   });
-  await page.route(CONFIG.webWeaver + "/**", (route) =>
+  await context.route(CONFIG.webWeaver + "/**", (route) =>
     route.fulfill({ contentType: "text/html", body: "web weaver" }));
   if (known) {
     await page.goto(origin + "/");
@@ -73,21 +73,108 @@ test("without Weaver, /join lands on Web Weaver with the code intact", async (t)
   assert.deepEqual(violations, []);
 });
 
-test("a known Mac browser shows Opened in Weaver, and the code leaves the address", async (t) => {
+test("a known Mac browser shows Opening Weaver, and the code leaves the address", async (t) => {
   const { page, violations } = await open(t, { known: true });
   // The launch of fbrc:// keeps the page from ever reporting "load".
   await page.goto(origin + "/join" + QUERY + "#code=s3cret", { waitUntil: "commit" });
-  await page.locator('[data-view="opened"]').waitFor({ state: "visible" });
+  await page.locator('[data-view="opening"]').waitFor({ state: "visible" });
   assert.equal(await page.evaluate(() => location.hash), "");
-  const web = await page.locator('[data-view="opened"] [data-web]').getAttribute("href");
+  const web = await page.locator('[data-view="opening"] [data-web]').getAttribute("href");
   assert.equal(web, CONFIG.webWeaver + "/join" + QUERY + "#code=s3cret");
   assert.deepEqual(violations, []);
 
-  // Continuing in the browser forgets that this browser has Weaver.
-  await page.locator('[data-view="opened"] [data-web]').click();
+});
+
+const stored = (page) => page.evaluate((k) => localStorage.getItem(k), CONFIG.storageKey);
+
+// What a browser does when an app takes the link: the window loses focus. A
+// real one can't happen here without an app to launch.
+const blur = (page) => page.evaluate(() => window.dispatchEvent(new Event("blur")));
+const hide = (page) => page.evaluate(() => {
+  Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "hidden" });
+  document.dispatchEvent(new Event("visibilitychange"));
+});
+const pagehide = (page) => page.evaluate(() => window.dispatchEvent(new Event("pagehide")));
+
+async function openFromWebWeaver(t) {
+  const { page, violations } = await open(t, { known: false });
+  // The launch of fbrc:// keeps the page from ever reporting "load".
+  await page.goto(origin + "/open" + QUERY + "#code=s3cret", { waitUntil: "commit" });
+  await page.locator('[data-view="opening"]').waitFor({ state: "visible" });
+  return { page, violations };
+}
+
+test("/open on a Mac says Opening Weaver and remembers nothing yet", async (t) => {
+  const { page, violations } = await openFromWebWeaver(t);
+  assert.equal(await stored(page), null);
+  const web = page.locator('[data-view="opening"] [data-web]');
+  assert.equal(await web.getAttribute("href"), CONFIG.webWeaver + "/join" + QUERY + "#code=s3cret");
+  assert.deepEqual(violations, []);
+});
+
+test("/open remembers Weaver when the window loses focus after the launch", async (t) => {
+  const { page } = await openFromWebWeaver(t);
+  await blur(page);
+  assert.equal(await stored(page), "1");
+});
+
+test("closing the tab or going Back after /open remembers nothing", async (t) => {
+  const { page } = await openFromWebWeaver(t);
+  // Unloading hides the page first, then fires pagehide.
+  await hide(page);
+  await pagehide(page);
+  // Focus moving after the page has gone, or been cached for Back, is not
+  // the app either.
+  await blur(page);
+  assert.equal(await stored(page), null);
+});
+
+test("Continue in browser from /open remembers nothing, even if focus leaves after", async (t) => {
+  const { page } = await openFromWebWeaver(t);
+  // Stop the navigation so the page is still there to blur.
+  await page.locator('[data-view="opening"] [data-web]').evaluate((a) =>
+    a.addEventListener("click", (e) => e.preventDefault()));
+  await page.locator('[data-view="opening"] [data-web]').click();
+  await blur(page);
+  assert.equal(await stored(page), null);
+});
+
+test("a known browser keeps Weaver when the launch takes focus away", async (t) => {
+  const { page } = await open(t, { known: true });
+  await page.goto(origin + "/join" + QUERY + "#code=s3cret", { waitUntil: "commit" });
+  await page.locator('[data-view="opening"]').waitFor({ state: "visible" });
+  await blur(page);
+  assert.equal(await stored(page), "1");
+});
+
+test("a browser wrongly known to have Weaver unsticks itself after one link", async (t) => {
+  const { page } = await open(t, { known: true });
+  await page.goto(origin + "/join" + QUERY + "#code=s3cret", { waitUntil: "commit" });
+  await page.locator('[data-view="opening"]').waitFor({ state: "visible" });
+  // Nothing took the link, so nothing took focus.
+  assert.equal(await stored(page), null);
+
+  // The next link, in a new tab, goes straight to Web Weaver.
+  const next = await page.context().newPage();
+  await next.goto(origin + "/join" + QUERY + "#code=again");
+  await next.waitForURL(CONFIG.webWeaver + "/**");
+  assert.equal(next.url(), CONFIG.webWeaver + "/join" + QUERY + "#code=again");
+});
+
+test("Continue in browser forgets a Weaver remembered on false evidence", async (t) => {
+  const { page } = await open(t, { known: true });
+  await page.goto(origin + "/join" + QUERY + "#code=s3cret", { waitUntil: "commit" });
+  await page.locator('[data-view="opening"]').waitFor({ state: "visible" });
+  // A browser's "can't open this address" alert takes focus too.
+  await blur(page);
+  assert.equal(await stored(page), "1");
+  await page.locator('[data-view="opening"] [data-web]').click();
   await page.waitForURL(CONFIG.webWeaver + "/**");
-  await page.goto(origin + "/");
-  assert.equal(await page.evaluate((k) => localStorage.getItem(k), CONFIG.storageKey), null);
+
+  // The next link goes straight to Web Weaver.
+  await page.goto(origin + "/join" + QUERY + "#code=again");
+  await page.waitForURL(CONFIG.webWeaver + "/**");
+  assert.equal(page.url(), CONFIG.webWeaver + "/join" + QUERY + "#code=again");
 });
 
 test("an unknown path shows the home view and runs under the CSP", async (t) => {
@@ -97,20 +184,13 @@ test("an unknown path shows the home view and runs under the CSP", async (t) => 
   assert.deepEqual(violations, []);
 });
 
-test("a reload after Weaver opened has no code left and opens nothing", async (t) => {
+test("a reload after the launch has no code left and opens nothing", async (t) => {
   const { page } = await open(t, { known: true });
   await page.goto(origin + "/join" + QUERY + "#code=s3cret", { waitUntil: "commit" });
-  await page.locator('[data-view="opened"]').waitFor({ state: "visible" });
+  await page.locator('[data-view="opening"]').waitFor({ state: "visible" });
   await page.reload();
   await page.locator('[data-view="stale"]').waitFor({ state: "visible" });
-  assert.equal(await page.locator('[data-view="opened"]').isVisible(), false);
-});
-
-test("/open on a Mac teaches the browser that its owner has Weaver", async (t) => {
-  const { page } = await open(t, { known: false });
-  await page.goto(origin + "/open" + QUERY + "#code=s3cret", { waitUntil: "commit" });
-  await page.locator('[data-view="opened"]').waitFor({ state: "visible" });
-  assert.equal(await page.evaluate((k) => localStorage.getItem(k), CONFIG.storageKey), "1");
+  assert.equal(await page.locator('[data-view="opening"]').isVisible(), false);
 });
 
 test("if the script is blocked, the page says so instead of going blank", async (t) => {
@@ -123,6 +203,6 @@ test("if the script is blocked, the page says so instead of going blank", async 
 test("the fallback never shows when the script runs", async (t) => {
   const { page } = await open(t, { known: true });
   await page.goto(origin + "/join" + QUERY + "#code=s3cret", { waitUntil: "commit" });
-  await page.locator('[data-view="opened"]').waitFor({ state: "visible" });
+  await page.locator('[data-view="opening"]').waitFor({ state: "visible" });
   assert.equal(await page.locator('[data-view="fallback"]').isVisible(), false);
 });
