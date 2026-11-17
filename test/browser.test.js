@@ -206,3 +206,27 @@ test("the fallback never shows when the script runs", async (t) => {
   await page.locator('[data-view="opening"]').waitFor({ state: "visible" });
   assert.equal(await page.locator('[data-view="fallback"]').isVisible(), false);
 });
+
+test("without Weaver, /space lands on Web Weaver's /space with the loom named", async (t) => {
+  const SPACE = "?host=https%3A%2F%2Festuary.example&space=did%3Akey%3Az6Mk1";
+  const { page, violations } = await open(t, { known: false });
+  await page.goto(origin + "/space" + SPACE);
+  await page.waitForURL(CONFIG.webWeaver + "/**");
+  assert.equal(page.url(), CONFIG.webWeaver + "/space" + SPACE);
+  assert.deepEqual(violations, []);
+});
+
+test("/space previews as a link to a loom, not an invitation", () => {
+  const space = fs.readFileSync(path.join(SITE, "space.html"), "utf8");
+  const join = fs.readFileSync(path.join(SITE, "join.html"), "utf8");
+  assert.match(space, /<meta property="og:title" content="A link to a loom">/);
+  assert.match(space, /<title>A link to a loom<\/title>/);
+  assert.doesNotMatch(space, /An invitation/);
+  assert.match(join, /<meta property="og:title" content="An invitation to a loom">/);
+});
+
+test("the association file does not claim /space until a released Weaver reads it", () => {
+  const aasa = JSON.parse(fs.readFileSync(path.join(SITE, ".well-known", "apple-app-site-association"), "utf8"));
+  const paths = aasa.applinks.details[0].components.map((c) => c["/"]);
+  assert.deepEqual(paths, ["/join", "/open"]);
+});

@@ -163,3 +163,64 @@ test("pages are reached with or without .html or a trailing slash", () => {
   assert.equal(visit({ pathname: "/" }).view, "home");
   assert.equal(visit({ pathname: "/joinx" }).view, "home");
 });
+
+// A space link names a loom and grants nothing: no code, nothing secret.
+const SPACE = "?host=https%3A%2F%2Festuary.example&space=did%3Akey%3Az6Mk1";
+const WEB_SPACE = CONFIG.webWeaver + "/space" + SPACE;
+
+function visitSpace(over) {
+  return visit(Object.assign({ pathname: "/space", search: SPACE, hash: "" }, over));
+}
+
+test("a space link without Weaver goes straight to Web Weaver's /space, on every device", () => {
+  for (const ua of [UA.mac, UA.iphone, UA.android, UA.windows]) {
+    const d = visitSpace({ ua });
+    assert.equal(d.view, "redirect", ua);
+    assert.equal(d.redirect, WEB_SPACE);
+    assert.equal(d.launch, undefined);
+  }
+});
+
+test("a space link goes to Web Weaver even on a Mac known to have Weaver, until Weaver reads fbrc://space", () => {
+  for (const fresh of [true, false]) {
+    const d = visitSpace({ known: true, fresh });
+    assert.equal(d.view, "redirect");
+    assert.equal(d.redirect, WEB_SPACE);
+    assert.equal(d.launch, undefined);
+  }
+});
+
+test("a space link never needs a code, and drops any fragment it carries", () => {
+  for (const known of [true, false]) {
+    const d = visitSpace({ known, fresh: false });
+    assert.notEqual(d.view, "stale");
+  }
+  assert.equal(visitSpace({ hash: "#code=s3cret", known: true }).redirect, WEB_SPACE);
+});
+
+test("a space link's redirect target is fixed, whatever host the link names", () => {
+  const d = visitSpace({ host: "evil.example" });
+  assert.equal(new URL(d.redirect).origin, new URL(CONFIG.webWeaver).origin);
+});
+
+test("a space link in an in-app browser asks to be opened elsewhere", () => {
+  const d = visitSpace({ ua: UA.instagram, known: true });
+  assert.equal(d.view, "in-app");
+  assert.equal(d.link, "https://fbrc.social/space" + SPACE);
+  assert.equal(d.launch, undefined);
+  assert.equal(d.redirect, undefined);
+});
+
+test("/space naming no loom goes home rather than to Web Weaver", () => {
+  for (const search of ["", "?utm_source=chat"]) {
+    const d = visitSpace({ search });
+    assert.equal(d.view, "home", search);
+    assert.equal(d.redirect, undefined);
+  }
+});
+
+test("/space is reached with or without .html or a trailing slash", () => {
+  for (const pathname of ["/space", "/space.html", "/space/"]) {
+    assert.equal(visitSpace({ pathname }).view, "redirect", pathname);
+  }
+});

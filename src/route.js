@@ -32,7 +32,9 @@ function deviceOf(ua, platform, maxTouchPoints) {
 
 function routeOf(pathname) {
   var p = pathname.replace(/\.html$/, "").replace(/\/+$/, "");
-  return p === "/join" || p === "/open" || p === "/setup" ? p.slice(1) : "";
+  return p === "/join" || p === "/open" || p === "/setup" || p === "/space"
+    ? p.slice(1)
+    : "";
 }
 
 // in: { pathname, search, hash, host, fresh, ua, platform, maxTouchPoints,
@@ -66,6 +68,24 @@ function decide(i) {
     };
   }
   if (route === "") return { view: "home" };
+
+  if (route === "space") {
+    // A link to a loom, which grants nothing (the SDK's space link): it names
+    // the service and the space, and carries no code, so nothing is kept
+    // from the fragment and any reload may open it again. It goes where an
+    // invitation would; the client says whether this person has access.
+    var query = new URLSearchParams(i.search);
+    if (!query.has("host") && !query.has("space")) return { view: "home" };
+    if (IN_APP.test(i.ua)) {
+      return { view: "in-app", link: "https://" + i.host + "/space" + i.search };
+    }
+    // Every Weaver released so far refuses an fbrc.social or fbrc: link it
+    // does not know, with no way on to the browser, so a known Mac would
+    // strand its owner there. Until a released Weaver reads `fbrc://space`,
+    // a space link goes to Web Weaver for everyone, and the association file
+    // does not claim it.
+    return { view: "redirect", redirect: CONFIG.webWeaver + "/space" + i.search };
+  }
 
   var code = fragment.get("code");
   var link = "https://" + i.host + "/join" + i.search + i.hash;

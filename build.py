@@ -1,7 +1,8 @@
 """Builds the static site into ./site.
 
-Every HTML page is the same file: the script reads its own path to decide what
-to do. The page's Content-Security-Policy allows only its one inline script and
+Every HTML page runs the same script, which reads its own path to decide what
+to do; only each page's preview (title, Open Graph tags, the heading shown
+without the script) differs. The page's Content-Security-Policy allows only its one inline script and
 one inline style, by hash, and no network connections, so nothing but this
 script ever runs while the invitation's code is in the address.
 """
@@ -19,7 +20,14 @@ SRC = ROOT / "src"
 OUT = ROOT / "site"
 
 APPLE_APP_IDS = ["Z2F9QWVXN2.com.commontools.CommonFabricWeaver"]
-PAGES = ["index", "join", "open", "setup", "404"]
+PAGES = ["index", "join", "open", "setup", "space", "404"]
+
+# What a chat app's preview, and the page before its script runs, says a link
+# is. A space link grants nothing, so it is never called an invitation.
+PREVIEWS = {
+    "space": ("A link to a loom", "Open it in Weaver or your browser."),
+}
+INVITATION_PREVIEW = ("An invitation to a loom", "Open it to join.")
 
 
 def sha256(text: str) -> str:
@@ -33,7 +41,7 @@ def web_weaver() -> str:
     return m.group(1)
 
 
-def page() -> str:
+def page(name: str) -> str:
     script = (SRC / "route.js").read_text()
     style = (SRC / "page.css").read_text()
     csp = "; ".join([
@@ -44,7 +52,10 @@ def page() -> str:
         "form-action 'none'",
     ])
     html = (SRC / "page.html").read_text()
-    for key, value in {"CSP": csp, "WEB_WEAVER": web_weaver()}.items():
+    title, description = PREVIEWS.get(name, INVITATION_PREVIEW)
+    fields = {"CSP": csp, "WEB_WEAVER": web_weaver(), "TITLE": title,
+              "DESCRIPTION": description}
+    for key, value in fields.items():
         html = html.replace("{{" + key + "}}", value)
     # Last, so the script and style are inserted verbatim.
     html = html.replace("{{STYLE}}", style).replace("{{SCRIPT}}", script)
@@ -71,9 +82,8 @@ def main() -> None:
     if OUT.exists():
         shutil.rmtree(OUT)
     (OUT / ".well-known").mkdir(parents=True)
-    html = page()
     for name in PAGES:
-        (OUT / (name + ".html")).write_text(html)
+        (OUT / (name + ".html")).write_text(page(name))
     (OUT / ".well-known" / "apple-app-site-association").write_text(apple_app_site_association())
     # Apple's CDN fetches this file with no redirect and parses it as JSON;
     # check the built file, which is what Pages serves.

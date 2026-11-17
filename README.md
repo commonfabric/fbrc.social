@@ -23,13 +23,14 @@ repository at `docs/development/projects/share-links/design.md`.
 | `/join?host&space&invite#code`             | A share link. Without Weaver, goes straight on to Web Weaver; on a Mac browser known to have Weaver, tries Weaver and offers **Continue in browser**. |
 | `/open?…#code`                             | The same link, reached from Web Weaver's **Open in Weaver**: the person asked for Weaver.      |
 | `/setup#n`                                 | Opened by Weaver's onboarding card, so this browser remembers its owner has Weaver.            |
+| `/space?host&space`                        | A link to a loom, which grants nothing: someone with access opens it, anyone else is told they have none. Goes to Web Weaver's `/space` for now: released Weavers refuse a link they don't know, so the association file claims it, and a Mac known to have Weaver opens `fbrc://space`, only once a released Weaver reads it. |
 
 Android's `assetlinks.json` is added once the signing key's fingerprint is
 known.
 
 The invitation's code travels after the `#`, which browsers never send to a
-server, so this site never sees it. Every page is the same file, run by
-`src/route.js`. Its Content-Security-Policy allows only that one inline script
+server, so this site never sees it. Every page runs the same script,
+`src/route.js`; only each page's preview differs. Its Content-Security-Policy allows only that one inline script
 and style, by hash, and no network connections. Web Weaver's address is fixed
 in the script and never taken from the link.
 
