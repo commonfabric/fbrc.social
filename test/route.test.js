@@ -55,6 +55,8 @@ test("a Mac browser known to have Weaver tries it at once, and claims nothing ye
   assert.equal(d.web, WEB);
   assert.equal(d.keepHash, undefined);
   assert.equal(d.remember, undefined);
+  // Each launch must earn the remember again, so a wrong one lasts one link.
+  assert.equal(d.rememberOnLeave, true);
 });
 
 test("a known Mac browser never relaunches on reload, back or restore", () => {

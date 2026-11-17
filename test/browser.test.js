@@ -56,7 +56,7 @@ async function open(t, { known }) {
   page.on("console", (m) => {
     if (/Content Security Policy/i.test(m.text())) violations.push(m.text());
   });
-  await page.route(CONFIG.webWeaver + "/**", (route) =>
+  await context.route(CONFIG.webWeaver + "/**", (route) =>
     route.fulfill({ contentType: "text/html", body: "web weaver" }));
   if (known) {
     await page.goto(origin + "/");
@@ -87,13 +87,14 @@ test("a known Mac browser shows Opening Weaver, and the code leaves the address"
 
 const stored = (page) => page.evaluate((k) => localStorage.getItem(k), CONFIG.storageKey);
 
-// What a browser does when an app takes the link: the window loses focus, or
-// the page is hidden. Real ones can't happen without an app to launch.
+// What a browser does when an app takes the link: the window loses focus. A
+// real one can't happen here without an app to launch.
 const blur = (page) => page.evaluate(() => window.dispatchEvent(new Event("blur")));
-const visibility = (page, state) => page.evaluate((s) => {
-  Object.defineProperty(document, "visibilityState", { configurable: true, get: () => s });
+const hide = (page) => page.evaluate(() => {
+  Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "hidden" });
   document.dispatchEvent(new Event("visibilitychange"));
-}, state);
+});
+const pagehide = (page) => page.evaluate(() => window.dispatchEvent(new Event("pagehide")));
 
 async function openFromWebWeaver(t) {
   const { page, violations } = await open(t, { known: false });
@@ -117,12 +118,15 @@ test("/open remembers Weaver when the window loses focus after the launch", asyn
   assert.equal(await stored(page), "1");
 });
 
-test("/open remembers Weaver when the page is hidden after the launch, not when shown", async (t) => {
+test("closing the tab or going Back after /open remembers nothing", async (t) => {
   const { page } = await openFromWebWeaver(t);
-  await visibility(page, "visible");
+  // Unloading hides the page first, then fires pagehide.
+  await hide(page);
+  await pagehide(page);
+  // Focus moving after the page has gone, or been cached for Back, is not
+  // the app either.
+  await blur(page);
   assert.equal(await stored(page), null);
-  await visibility(page, "hidden");
-  assert.equal(await stored(page), "1");
 });
 
 test("Continue in browser from /open remembers nothing, even if focus leaves after", async (t) => {
@@ -135,10 +139,35 @@ test("Continue in browser from /open remembers nothing, even if focus leaves aft
   assert.equal(await stored(page), null);
 });
 
-test("Continue in browser unsticks a browser wrongly known to have Weaver", async (t) => {
+test("a known browser keeps Weaver when the launch takes focus away", async (t) => {
   const { page } = await open(t, { known: true });
   await page.goto(origin + "/join" + QUERY + "#code=s3cret", { waitUntil: "commit" });
   await page.locator('[data-view="opening"]').waitFor({ state: "visible" });
+  await blur(page);
+  assert.equal(await stored(page), "1");
+});
+
+test("a browser wrongly known to have Weaver unsticks itself after one link", async (t) => {
+  const { page } = await open(t, { known: true });
+  await page.goto(origin + "/join" + QUERY + "#code=s3cret", { waitUntil: "commit" });
+  await page.locator('[data-view="opening"]').waitFor({ state: "visible" });
+  // Nothing took the link, so nothing took focus.
+  assert.equal(await stored(page), null);
+
+  // The next link, in a new tab, goes straight to Web Weaver.
+  const next = await page.context().newPage();
+  await next.goto(origin + "/join" + QUERY + "#code=again");
+  await next.waitForURL(CONFIG.webWeaver + "/**");
+  assert.equal(next.url(), CONFIG.webWeaver + "/join" + QUERY + "#code=again");
+});
+
+test("Continue in browser forgets a Weaver remembered on false evidence", async (t) => {
+  const { page } = await open(t, { known: true });
+  await page.goto(origin + "/join" + QUERY + "#code=s3cret", { waitUntil: "commit" });
+  await page.locator('[data-view="opening"]').waitFor({ state: "visible" });
+  // A browser's "can't open this address" alert takes focus too.
+  await blur(page);
+  assert.equal(await stored(page), "1");
   await page.locator('[data-view="opening"] [data-web]').click();
   await page.waitForURL(CONFIG.webWeaver + "/**");
 

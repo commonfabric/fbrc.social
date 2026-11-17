@@ -67,16 +67,19 @@ Pushing to `main` publishes `site/` to GitHub Pages.
 A browser can't tell whether an app took an `fbrc:` link: with no app to
 answer, most browsers fail silently. So the page never says Weaver opened. It
 says **Opening Weaver…**, always with **Continue in browser**, and a Mac
-browser learns its owner has Weaver only from evidence:
+browser learns its owner has Weaver only from:
 
 - `/setup`, which Weaver itself opens.
-- After `/open` fires the launch, the page losing focus (`blur`) or being
-  hidden (`visibilitychange`), which is what happens when an app comes
-  forward.
+- The window losing focus (`blur`) after the page fires the launch, which is
+  what happens when an app comes forward. Each launch forgets Weaver first and
+  must earn the remember again, so a wrong guess lasts one link at most.
 
-**Continue in browser** forgets it again, so a wrong guess (someone switching
-away by hand right after a failed launch) undoes itself the next time Weaver
-doesn't open.
+Focus is a heuristic, not proof: a browser's own "Open Weaver?" prompt or
+"can't open" alert takes focus too, as does switching tabs right after the
+launch. Being hidden is not counted, because closing the tab or going Back
+hides the page as well. **Continue in browser** forgets Weaver at once. Someone
+who has Weaver and continues in the browser is sent to Web Weaver until they
+next use **Open in Weaver**.
 
 ## Keep in mind
 
