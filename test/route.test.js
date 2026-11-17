@@ -48,18 +48,19 @@ test("the redirect target is fixed, whatever host the link names", () => {
   assert.equal(new URL(d.redirect).origin, new URL(CONFIG.webWeaver).origin);
 });
 
-test("a Mac browser known to have Weaver opens it at once", () => {
+test("a Mac browser known to have Weaver tries it at once, and claims nothing yet", () => {
   const d = visit({ known: true });
-  assert.equal(d.view, "opened");
+  assert.equal(d.view, "opening");
   assert.equal(d.launch, WEAVER);
   assert.equal(d.web, WEB);
   assert.equal(d.keepHash, undefined);
+  assert.equal(d.remember, undefined);
 });
 
 test("a known Mac browser never relaunches on reload, back or restore", () => {
   for (const pathname of ["/join", "/open"]) {
     const d = visit({ pathname, known: true, fresh: false });
-    assert.equal(d.view, "opened");
+    assert.equal(d.view, "opening");
     assert.equal(d.launch, null);
   }
 });
@@ -71,10 +72,28 @@ test("only a Mac is ever treated as having Weaver", () => {
   }
 });
 
-test("/open on a Mac remembers the choice and opens Weaver", () => {
+test("/open on a Mac tries Weaver and remembers it only once the page is left", () => {
   const d = visit({ pathname: "/open" });
-  assert.equal(d.remember, true);
+  assert.equal(d.view, "opening");
   assert.equal(d.launch, WEAVER);
+  assert.equal(d.web, WEB);
+  // Firing the scheme is no evidence Weaver took it.
+  assert.equal(d.remember, undefined);
+  assert.equal(d.rememberOnLeave, true);
+});
+
+test("nothing but /setup remembers Weaver before there is evidence", () => {
+  const cases = [];
+  for (const pathname of ["/join", "/open", "/setup", "/"]) {
+    for (const [ua, maxTouchPoints] of [[UA.mac, 0], [UA.iphone, 5], [UA.android, 5], [UA.windows, 0]]) {
+      for (const known of [true, false]) {
+        const hash = pathname === "/setup" ? "#n=N1" : HASH;
+        const d = visit({ pathname, ua, maxTouchPoints, known, hash });
+        if (d.remember) cases.push(pathname + " " + ua);
+      }
+    }
+  }
+  assert.deepEqual(cases, ["/setup " + UA.mac, "/setup " + UA.mac]);
 });
 
 test("/open on an iPhone says Weaver didn't open, and never fires the scheme", () => {

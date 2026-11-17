@@ -37,7 +37,14 @@ function routeOf(pathname) {
 
 // in: { pathname, search, hash, host, fresh, ua, platform, maxTouchPoints,
 //       known }
-// out: { view, redirect?, launch?, remember?, keepHash?, web?, link? }
+// out: { view, redirect?, launch?, remember?, rememberOnLeave?, keepHash?,
+//        web?, link? }
+//
+// remember: Weaver itself sent the browser here, so it has Weaver.
+// rememberOnLeave: remember only once the page loses focus or is hidden after
+// the launch, the one sign a browser gives that an app took the link. Opening
+// "fbrc:" with no app to answer it fails silently in most browsers, so the
+// launch alone proves nothing.
 function decide(i) {
   var route = routeOf(i.pathname);
   var device = deviceOf(i.ua, i.platform, i.maxTouchPoints);
@@ -69,7 +76,7 @@ function decide(i) {
 
   if (route === "join") {
     if (device === "mac" && i.known) {
-      return { view: "opened", launch: i.fresh ? weaver : null, web: web };
+      return { view: "opening", launch: i.fresh ? weaver : null, web: web };
     }
     return { view: "redirect", redirect: web };
   }
@@ -77,8 +84,8 @@ function decide(i) {
   // route === "open": the person asked for Weaver.
   if (device === "mac") {
     return {
-      view: "opened",
-      remember: true,
+      view: "opening",
+      rememberOnLeave: true,
       launch: i.fresh ? weaver : null,
       web: web,
     };
@@ -153,7 +160,10 @@ function run(w) {
     doc.querySelectorAll("[data-web]").forEach(function (a) {
       a.href = d.web || CONFIG.webWeaver;
       a.addEventListener("click", function () {
-        // A browser where Weaver didn't open has learned the wrong thing.
+        // Someone who continues in the browser didn't get Weaver this time,
+        // so stop sending their links to it; this also undoes a remember
+        // made on misleading evidence.
+        disarm();
         write(false);
       });
     });
@@ -183,7 +193,25 @@ function run(w) {
         });
       });
     });
-    if (d.launch) loc.href = d.launch;
+    if (d.launch) {
+      if (d.rememberOnLeave) rememberOnLeave();
+      loc.href = d.launch;
+    }
+  }
+
+  // Armed before the launch, so an app that comes forward at once is seen.
+  function rememberOnLeave() {
+    w.addEventListener("blur", left);
+    w.document.addEventListener("visibilitychange", left);
+  }
+  function left(e) {
+    if (e.type === "visibilitychange" && w.document.visibilityState !== "hidden") return;
+    disarm();
+    write(true);
+  }
+  function disarm() {
+    w.removeEventListener("blur", left);
+    w.document.removeEventListener("visibilitychange", left);
   }
   if (w.document.readyState === "loading") {
     w.document.addEventListener("DOMContentLoaded", show);
