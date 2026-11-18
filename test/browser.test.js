@@ -216,6 +216,17 @@ test("without Weaver, /space lands on Web Weaver's /space with the loom named", 
   assert.deepEqual(violations, []);
 });
 
+test("a known Mac browser opens Weaver for /space, with Web Weaver's /space to continue in", async (t) => {
+  const SPACE = "?host=https%3A%2F%2Festuary.example&space=did%3Akey%3Az6Mk1";
+  const { page, violations } = await open(t, { known: true });
+  // The launch of fbrc:// keeps the page from ever reporting "load".
+  await page.goto(origin + "/space" + SPACE, { waitUntil: "commit" });
+  await page.locator('[data-view="opening"]').waitFor({ state: "visible" });
+  const web = await page.locator('[data-view="opening"] [data-web]').getAttribute("href");
+  assert.equal(web, CONFIG.webWeaver + "/space" + SPACE);
+  assert.deepEqual(violations, []);
+});
+
 test("/space previews as a link to a loom, not an invitation", () => {
   const space = fs.readFileSync(path.join(SITE, "space.html"), "utf8");
   const join = fs.readFileSync(path.join(SITE, "join.html"), "utf8");
@@ -225,8 +236,8 @@ test("/space previews as a link to a loom, not an invitation", () => {
   assert.match(join, /<meta property="og:title" content="An invitation to a loom">/);
 });
 
-test("the association file does not claim /space until a released Weaver reads it", () => {
+test("the association file claims /space, so a member's Weaver takes their loom links", () => {
   const aasa = JSON.parse(fs.readFileSync(path.join(SITE, ".well-known", "apple-app-site-association"), "utf8"));
   const paths = aasa.applinks.details[0].components.map((c) => c["/"]);
-  assert.deepEqual(paths, ["/join", "/open"]);
+  assert.deepEqual(paths, ["/join", "/open", "/space"]);
 });
