@@ -181,12 +181,29 @@ test("a space link without Weaver goes straight to Web Weaver's /space, on every
   }
 });
 
-test("a space link goes to Web Weaver even on a Mac known to have Weaver, until Weaver reads fbrc://space", () => {
-  for (const fresh of [true, false]) {
-    const d = visitSpace({ known: true, fresh });
-    assert.equal(d.view, "redirect");
-    assert.equal(d.redirect, WEB_SPACE);
-    assert.equal(d.launch, undefined);
+test("a space link on a Mac known to have Weaver opens Weaver, with Web Weaver to continue in", () => {
+  const d = visitSpace({ known: true });
+  assert.equal(d.view, "opening");
+  assert.equal(d.launch, "fbrc://space" + SPACE);
+  assert.equal(d.web, WEB_SPACE);
+  assert.equal(d.redirect, undefined);
+  // As for an invitation, each launch earns the remember again.
+  assert.equal(d.rememberOnLeave, true);
+  assert.equal(d.remember, undefined);
+});
+
+test("a space link never relaunches Weaver on reload, back or restore", () => {
+  const d = visitSpace({ known: true, fresh: false });
+  assert.equal(d.view, "opening");
+  assert.equal(d.launch, null);
+  assert.equal(d.web, WEB_SPACE);
+});
+
+test("only a Mac known to have Weaver is sent a space link's fbrc://", () => {
+  for (const [ua, maxTouchPoints] of [[UA.iphone, 5], [UA.ipad, 5], [UA.android, 5], [UA.windows, 0]]) {
+    const d = visitSpace({ ua, maxTouchPoints, known: true });
+    assert.equal(d.view, "redirect", ua);
+    assert.equal(d.redirect, WEB_SPACE, ua);
   }
 });
 
@@ -195,7 +212,11 @@ test("a space link never needs a code, and drops any fragment it carries", () =>
     const d = visitSpace({ known, fresh: false });
     assert.notEqual(d.view, "stale");
   }
-  assert.equal(visitSpace({ hash: "#code=s3cret", known: true }).redirect, WEB_SPACE);
+  assert.equal(visitSpace({ hash: "#code=s3cret" }).redirect, WEB_SPACE);
+  const known = visitSpace({ hash: "#code=s3cret", known: true });
+  assert.equal(known.launch, "fbrc://space" + SPACE);
+  assert.equal(known.web, WEB_SPACE);
+  assert.equal(known.keepHash, undefined);
 });
 
 test("a space link's redirect target is fixed, whatever host the link names", () => {

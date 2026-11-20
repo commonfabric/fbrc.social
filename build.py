@@ -72,6 +72,7 @@ def apple_app_site_association() -> str:
                 "components": [
                     {"/": "/join", "comment": "an invitation"},
                     {"/": "/open", "comment": "an invitation, opened from Web Weaver"},
+                    {"/": "/space", "comment": "a link to a loom, which grants nothing"},
                 ],
             }],
         },
@@ -89,7 +90,7 @@ def main() -> None:
     # check the built file, which is what Pages serves.
     built = json.loads((OUT / ".well-known" / "apple-app-site-association").read_text())
     paths = [c["/"] for c in built["applinks"]["details"][0]["components"]]
-    if paths != ["/join", "/open"]:
+    if paths != ["/join", "/open", "/space"]:
         raise SystemExit("apple-app-site-association: unexpected paths " + repr(paths))
     print("built", OUT)
 
